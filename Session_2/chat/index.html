@@ -1,0 +1,142 @@
+<html>
+<head>
+
+	<style>
+
+		body {
+
+			margin: 0px;
+			padding: 0px;
+			font-family: "Verdana";
+
+		}
+
+		#inputContainer {
+			background-color: #333333;
+			position: fixed;
+			bottom: 0px;
+			width: 100%;
+		}
+		#inputContainer #textareaWrapper {
+			padding: 20px;
+		}
+		#inputContainer textarea {
+			width: 100%;
+			height: 50px;
+			line-height: 40px;
+			font-size: 30px;
+			border-radius: 15px;
+			padding: 5px 15px;
+			color: #333333;
+			outline: none; /* Quita el glow cuando está en focus */
+			resize: none;
+		}
+
+		#messageContainer {
+			background-color: #dddddd;
+			height: 100%;
+			position: fixed;
+			width: 100%;
+		}
+
+		#messageContainer #chatMessageWrapper {
+			padding: 10px 20px;
+			overflow-y: scroll;
+		}
+
+		#messageContainer #chatMessageWrapper .chatMessage {
+			width: 100%;
+			background-color: #FFFFFF;
+			border-bottom: 2px solid #666666;
+			margin: 10px 0px 10px;
+			transition: background-color 0.5s;
+		}
+
+		#messageContainer #chatMessageWrapper .chatMessage p {
+			padding: 20px;
+			margin: 0px;
+		}
+
+		#messageContainer #chatMessageWrapper .chatMessage p .chatMessageUsername{
+			color: #2B303B;
+			font-weight: bolder;
+		}
+
+	</style>
+
+	<script src="socket.io.min.js"></script>
+
+</head>
+<body>
+	<div id="messageContainer">
+		<div id="chatMessageWrapper">
+
+		</div>
+	</div>
+	<div id="inputContainer">
+		<div id="textareaWrapper">
+			<textarea id="chatInput"></textarea>
+		</div>
+	</div>
+
+	<script>
+
+		var chatMessageWrapper = document.getElementById("chatMessageWrapper");
+		var username = prompt("Enter your username:") || "Anonymous"; //much security
+		var input = document.getElementById("chatInput");
+
+		function appendChatMessage (data) {
+
+			var div = document.createElement('div');
+			div.className += " chatMessage";
+
+			var s = '<p><span class="chatMessageUsername">'+data.username+':</span> '+data.message+'</p>';
+			div.innerHTML = s;
+
+			div.style.backgroundColor = "#3879D9";
+			chatMessageWrapper.appendChild(div);
+
+			chatMessageWrapper.scrollTop = chatMessageWrapper.scrollHeight;
+			setTimeout(function () {
+				div.style.backgroundColor = "#FFFFFF";
+			}, 1);
+
+		}
+
+		var socket = io.connect('http://localhost:4242');
+
+		socket.on('connect', function () {
+			appendChatMessage({username:"System", message:"Connected to server!"});
+			socket.emit('userConnected', username);
+		});
+
+		socket.on('chatMessage', function (data) {
+			appendChatMessage(data);
+		});
+
+		var ENTER_KEY_CODE = 13;
+
+		function sendMessage () {
+
+			//Get message
+			var message = input.value.trim();
+			input.value = "";
+			if (message == "") return;
+
+			//Actually send message
+			socket.emit("chatMessage", {username:username, message:message});
+
+		}
+
+		document.addEventListener('keydown', function (e) {
+			if (e.keyCode == ENTER_KEY_CODE && !e.shiftKey) sendMessage();
+		});
+
+		window.onresize = function () {
+			chatMessageWrapper.style.height = (window.innerHeight-90-20) + 'px';
+		}
+		window.onresize();
+
+	</script>
+
+</body>

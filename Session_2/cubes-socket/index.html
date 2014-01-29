@@ -1,0 +1,118 @@
+<html>
+<head>
+	<style>
+		body {
+			margin: 0px;
+		}
+	</style>
+	<script src="requestAnimFrame.js"></script>
+	<script src="Keyboard.js"></script>
+	<script src="socket.io.min.js"></script>
+</head>
+<body>
+	<canvas id="myCanvas"></canvas>
+	<script>
+
+		var canvas = document.getElementById("myCanvas");
+		canvas.height = canvas.width = 600;
+
+		var context = canvas.getContext('2d');
+		var socket = io.connect('http://localhost:4242');
+		socket.on('connect', function () {
+			socket.id = socket.socket.sessionid;
+		});
+
+		var keyboard = new KeyboardJS(false);
+
+		var cubes = {};
+
+		function Cube (id) {
+
+		}
+		Cube.prototype.updateWithCubeData = function (data) {
+
+			if (data === undefined) return;
+
+			/*
+
+			for (var prop in data) this[prop] = data[prop];
+
+			*/
+
+			if (data.x !== undefined) this.x = data.x;
+			if (data.y !== undefined) this.y = data.y;
+			if (data.edge !== undefined) this.edge = data.edge;
+			if (data.id !== undefined) this.id = data.id;
+			if (data.color !== undefined) this.color = data.color;
+
+		}
+		Cube.prototype.speed = 5;
+		Cube.prototype.logic = function () {
+
+			if (this.id === socket.id) {
+
+				var oldX = this.x;
+				var oldY = this.y;
+
+				//LOGICA de teclado
+				if (keyboard.char('D')) this.x += this.speed;
+				else if (keyboard.char('A')) this.x -= this.speed;
+
+				if (keyboard.char('W')) this.y -= this.speed;
+				else if (keyboard.char('S')) this.y += this.speed;
+
+				if (oldX !== this.x || oldY !== this.y) {
+					socket.emit('cubeUpdate', this);
+				}
+
+			}
+
+		}
+		Cube.prototype.render = function (ctx) {
+			ctx.fillStyle = this.color;
+			ctx.fillRect(this.x, this.y, this.edge, this.edge);
+		}
+		Cube.prototype.color = "#000000";
+
+		socket.on('cubeUpdate', function (cubeData) {
+
+			console.log(cubeData);
+
+			var cube = cubes[cubeData.id];
+
+			if (cube === undefined) {
+				cube = new Cube ();
+				cubes[cubeData.id] = cube;
+			}
+
+			cube.updateWithCubeData(cubeData);
+
+		});
+
+		socket.on('cubeDisconnect', function (playerId) {
+			delete cubes[playerId];
+		});
+
+		function logic () {
+
+			for (var playerId in cubes) cubes[playerId].logic();
+
+		}
+
+		function render () {
+
+			context.clearRect(0,0,canvas.width,canvas.height);
+			for (var playerId in cubes) cubes[playerId].render(context);
+
+		}
+
+		function mainLoop () {
+			requestAnimFrame(mainLoop);
+			logic();
+			render();
+		}
+		requestAnimFrame(mainLoop);
+
+	</script>
+</body>
+</html>

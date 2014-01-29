@@ -1,0 +1,15 @@
+{
+  "name": "cubes-socket",
+  "version": "0.0.0",
+  "description": "",
+  "main": "Cube.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "socket.io": "~0.9.16"
+  }
+}

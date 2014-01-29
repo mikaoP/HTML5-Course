@@ -1,0 +1,135 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<style>
+			body {
+				margin: 0px;
+				padding: 0px;
+			}
+		</style>
+		
+	</head>
+	<body>
+		<script src="requestAnimFrame.js"></script>
+		<script src="keyboard.js"></script>
+		<canvas id="myCanvas"></canvas>
+		<script>
+			var canvas = document.getElementById('myCanvas');
+			var context = canvas.getContext('2d');
+			var keyboard = new KeyboardJS();
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+			var Coin = function() {
+				this.edge = 20;
+				this.x = Math.random()*(canvas.width - this.edge);
+				this.y = Math.random()*(canvas.height - this.edge);
+			};
+			Coin.prototype = {
+				render: function(ctx) {
+					ctx.fillStyle = 'orange';
+					ctx.fillRect(this.x, this.y, this.edge, this.edge);
+				}
+			};
+			var Player = function () {
+				this.x = Math.random()*canvas.width;
+				this.y = Math.random()*canvas.height;
+				this.edge = 20;
+				this.score = 0;
+			};
+			Player.prototype = {
+				logic: function(dt) {
+					if (keyboard.char('W')) this.y -= 400*dt;
+					else if (keyboard.char('S')) this.y += 400*dt;
+					
+					if (keyboard.char('A')) this.x -= 400*dt;
+					else if (keyboard.char('D')) this.x += 400*dt;
+					
+					if (this.y < 0) this.y = 0;
+					else if (this.y + this.edge > canvas.height) this.y = canvas.height - this.edge;
+					
+					if (this.x < 0) this.x = 0;
+					else if (this.x + this.edge > canvas.width) this.x = canvas.width - this.edge;
+					
+					if (this.hitTest(coin)) {
+						coin = new Coin;
+						enemies.push(new Enemy);
+						++this.score;
+					}
+					for (var i = enemies.length - 1; i >= 0; --i) {
+						if (this.hitTest(enemies[i])) {
+							alert("Game Over");
+							enemies = [new Enemy];
+							coin = new Coin;
+							player = new Player;
+						}
+					}
+				},
+				render: function(ctx) {
+					ctx.fillStyle = 'blue';
+					ctx.fillRect(this.x, this.y, this.edge, this.edge);
+				}
+			};
+			Player.prototype.hitTest = function (obj) {
+				return (this.x + this.edge >= obj.x && this.x <= obj.x + obj.edge &&
+				this.y + this.edge >= obj.y && this.y <= obj.y + obj.edge);
+			};
+			var Enemy = function () {
+				this.x = Math.random()*canvas.width;
+				this.y = Math.random()*canvas.width;
+				this.vx = Math.random()*400;
+				this.vy = Math.random()*400;
+				this.edge = 20;
+			};
+			Enemy.prototype = {
+				logic: function(dt) {
+					this.x += this.vx*dt;
+					this.y += this.vy*dt;
+					if (this.y < 0) {
+						this.vy *= -1;
+						this.y = 0;
+					}
+					else if (this.y + this.edge > canvas.height) {
+						this.vy *= -1;
+						this.y = canvas.height - this.edge;
+					}
+					
+					if (this.x < 0) {
+						this.vx *= -1;
+						this.x = 0;
+					}
+					else if (this.x + this.edge > canvas.width) {
+						this.vx *= -1;
+						this.x = canvas.width - this.edge;
+					}
+				},
+				render: function(ctx) {
+					ctx.fillStyle = 'red';
+					ctx.fillRect(this.x, this.y, this.edge, this.edge);
+				}
+			};
+			var player = new Player;
+			var enemies = [];
+			enemies.push(new Enemy);
+			var coin = new Coin;
+			var oldTime = +new Date();
+			var mainLoop = function() {
+				var newTime = +new Date();
+				var deltaTime = (newTime - oldTime)/1000;
+				oldTime = newTime;
+				context.clearRect(0, 0, canvas.width, canvas.height);
+				context.font = '16pt Calibri';
+				context.fillStyle = 'red';
+				context.fillText("Score: " + player.score, 5, 20);
+				player.logic(deltaTime);
+				player.render(context);
+				for (var i = enemies.length - 1; i >= 0; --i) {
+					enemies[i].logic(deltaTime);
+					enemies[i].render(context);
+				}
+				coin.render(context);
+				requestAnimFrame(mainLoop);
+			};
+			mainLoop();
+		</script>
+	</body>
+</html>
