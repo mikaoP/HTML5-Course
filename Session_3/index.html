@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<style>
+			body {
+				margin: 0px;
+				padding: 0px;
+			}
+		</style>
+	</head>
+	<body>
+		<script src="requestAnimFrame.js"></script>
+		<script src="Keyboard.js"></script>
+		<script src="socket.io.min.js"></script>
+
+		<canvas id="myCanvas"></canvas>
+			<script>
+			var canvas = document.getElementById('myCanvas');
+			var context = canvas.getContext('2d');
+
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+			var socket = io.connect('http://localhost:4242');
+			var kb = new KeyboardJS(false);
+
+
+			socket.on('connect', function() {
+				socket.id = socket.socket.sessionid;
+			});
+			
+			var Player = function() {}
+			var players = {};
+			var color = 'white';
+
+			Player.prototype.updateWithData = function(data) {
+				this.id = data.id;
+				this.score = data.score;
+				this.color = data.color;
+				this.name = data.name;
+			}
+
+			var oldW = false;
+			Player.prototype.logic = function() {
+				if (!oldW && kb.char('W')) socket.emit('playerHit');
+				oldW = kb.char('W');
+			}
+			Player.prototype.render = function(ctx) {
+				ctx.save();
+				ctx.translate(40, 40); // Mueve el punto de origen
+				ctx.fillStyle = 'white';
+				ctx.fillRect(0, 0, 150, 25);
+				ctx.fillStyle = this.color;
+				ctx.font = '20pt Calibri';
+				ctx.fillText('Score: ' + this.name + " " + this.score, 5, 20);
+				ctx.restore();
+			}
+
+			socket.on('playerUpdate', function(playerData) {
+				console.log(playerData);
+				var player = players[playerData.id];
+				if (player === undefined) {
+					player = new Player ();
+					players[playerData.id] = player;
+				}
+				player.updateWithData(playerData); // Actualizamos los valores de player con los de Player.js
+			});
+			
+			socket.on('getName', function () {
+				var username = prompt("Introduzca su nombre: ")  || "Anonymous";
+				socket.emit('getName', username);
+			});
+
+			socket.on('renderColor', function(colorChanged) {
+				color = colorChanged;
+			});
+
+			socket.on('playerDisconnect', function(playerData) {
+				delete players[playerData];
+			});
+			
+			function mainLoop() {
+				requestAnimFrame(mainLoop);
+				
+
+				if (players[socket.id] !== undefined) {
+					players[socket.id].logic()
+				}
+
+				context.fillStyle = color;
+				context.fillRect(0, 0, canvas.width, canvas.height);
+
+				context.save();
+				for (playerId in players) {
+					players[playerId].render(context);
+					context.translate(0, 25);
+				}
+				context.restore();
+
+				
+			}
+			mainLoop();
+			</script>			
