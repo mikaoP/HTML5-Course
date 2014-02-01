@@ -1,0 +1,116 @@
+<html>
+<head>
+	<style>
+
+		body {
+			margin: 0px;
+			padding: 0px;
+		}
+
+	</style>
+
+	<script src="Keyboard.js"></script>
+	<script src="requestAnimFrame.js"></script>
+
+</head>
+<body>
+
+	<canvas id="myCanvas"></canvas>
+
+	<script>
+
+		var canvas = document.getElementById("myCanvas");
+		var context = canvas.getContext('2d');
+		var kb = new KeyboardJS(true);
+
+		function Camera () {}
+		Camera.prototype = {
+			x : 0,
+			y : 0
+		}
+
+		var camera = new Camera();
+
+		var cubes = [];
+
+		function Cube () {
+			this.x = Math.random()*canvas.width;
+			this.y = Math.random()*canvas.height;
+			this.edge = Math.floor(Math.random()*4)*10+20;
+
+			this.vx = Math.random()*2-1;
+			this.vy = Math.random()*2-1;
+
+			this.vx /= 100;
+			this.vy /= 100;
+		}
+		Cube.prototype.logic = function (dt) {
+			this.x += this.vx*dt;
+			this.y += this.vy*dt;
+		}
+		Cube.prototype.render = function (ctx) {
+
+			if (this.x+this.width < camera.x) return;
+			if (this.x > camera.x+canvas.width) return;
+			if (this.y > camera.y+canvas.height) return;
+			if (this.y+this.height < camera.y) return;
+
+			ctx.fillStyle = "red";
+			ctx.fillRect(this.x,this.y,this.edge,this.edge);
+
+		}
+
+		var speed = 2;
+		function logic (dt) {
+
+			if (kb.char('A')) camera.x -= speed*dt;
+			else if (kb.char('D')) camera.x += speed*dt;
+
+			if (kb.char('W')) camera.y -= speed*dt;
+			else if (kb.char('S')) camera.y += speed*dt;
+
+			for (var i = 0; i < cubes.length; ++i) cubes[i].logic(dt);
+
+		}
+
+		function render (ctx) {
+			ctx.save();
+
+			ctx.globalAlpha = 0.3;
+			ctx.fillStyle = "#eeeeee";
+			ctx.fillRect(0,0,canvas.width,canvas.height);
+			
+			ctx.globalAlpha = 1;
+
+			ctx.translate(-camera.x, -camera.y);
+
+			for (var i = 0; i < cubes.length; ++i) cubes[i].render(context);
+
+			ctx.restore();
+
+		}
+
+		window.onresize = function () {
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+		}
+		window.onresize();
+
+		for (var i = 0; i < 100; ++i) cubes.push(new Cube());
+
+		var oldDate = +new Date();
+		function mainLoop () {
+			requestAnimFrame(mainLoop);
+
+			var newDate = +new Date();
+			var delta = newDate - oldDate;
+			oldDate = newDate;
+
+			logic(delta);
+			render(context);
+		}
+		requestAnimFrame(mainLoop);
+
+	</script>
+
+</body>

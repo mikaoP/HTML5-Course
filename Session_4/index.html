@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<style>
+			body {
+				margin: 0px;
+				padding: 0px;
+			}
+		</style>
+	</head>
+	<body>
+		<script src="requestAnimFrame.js"></script>
+		<script src="Keyboard.js"></script>
+		<script src="socket.io.min.js"></script>
+
+		<canvas id="myCanvas"></canvas>
+			<script>
+			var canvas = document.getElementById('myCanvas');
+			var context = canvas.getContext('2d');
+			window.onresize = function() {
+				canvas.width = window.innerWidth - 5;
+				canvas.height = window.innerHeight - 5;
+			}
+			window.onresize();
+			var socket = io.connect('http://localhost:4242');
+			var kb = new KeyboardJS(false);
+
+
+			socket.on('connect', function() {
+				socket.id = socket.socket.sessionid;
+			});
+			
+			var Player = function() {}
+			var players = {};
+			
+			var oldKey = false;
+			Player.prototype.logic = function() {
+				var oldX = this.x;
+				var oldY = this.y;
+				if (this.id === socket.id) {
+					if (kb.char('W')  && !oldKey) this.y -= 20;
+					else if (kb.char('S') && !oldKey) this.y += 20;
+					else if (kb.char('A') && !oldKey) this.x -= 20;
+					else if (kb.char('D') && !oldKey) this.x += 20;
+					oldKey = kb.char('W') || kb.char('S') || kb.char('A')
+					|| kb.char('D'); 
+				}
+				
+				if (oldX !== this.x || oldY !== this.y) {
+					socket.emit('playerUpdate', this);
+				}
+			}
+			Player.prototype.updateWithData = function(data) {
+				if (data === undefined) return;
+				if (data.id !== undefined) this.id = data.id;
+				if (data.x !== undefined) this.x = data.x;
+				if (data.y !== undefined) this.y = data.y;
+				if (data.color !== undefined) this.color = data.color;
+			}
+			Player.prototype.render = function(ctx) {
+				ctx.fillStyle = this.color;
+				ctx.fillRect(this.x, this.y, 20, 20);
+			}
+			socket.on('playerUpdate', function(playerData) {
+				console.log(playerData);
+				var player = players[playerData.id];
+				if (player === undefined) {
+					player = new Player();
+					players[playerData.id] = player;
+				}
+				player.updateWithData(playerData);
+			});
+			socket.on('playerDisconnect', function(playerId) {
+				delete players[playerId];
+			});
+			
+			function logic() {
+				for (var playerId in players) players[playerId].logic();
+			}
+			function render() {
+				context.clearRect(0, 0, canvas.width, canvas.height);
+				for (var playerId in players) players[playerId].render(context);
+			}
+			function mainLoop() {
+				requestAnimFrame(mainLoop);
+				logic();
+				render();
+			}
+			mainLoop();
+			</script>
+	</body>
+</html>	
