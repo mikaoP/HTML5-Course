@@ -1,0 +1,94 @@
+<html>
+	<head>
+		<style>
+			body {
+				margin: 0px;
+				padding: 0px;
+			}
+		</style>
+	</head>
+	<body>
+		<script src="Keyboard.js"></script>
+		<script src="requestAnimFrame.js"></script>
+
+		<script src="js/Pos.js"></script>
+		<script src="js/Cell.js"></script>
+		<script src="js/Map.js"></script>
+		<script src="js/Camera.js"></script>
+
+		<canvas id="myCanvas"></canvas>
+		<script>
+			var canvas = document.getElementById('myCanvas');
+			var context = canvas.getContext('2d');
+
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+			var socket = io.connect('http://localhost:4242');
+			
+			socket.io('connect', function() {
+				socket.id = socket.socket.id;
+			});
+
+			var cameras = {};
+			var map = new Map();
+			var kb = new KeyboardJS(true);
+
+			var speed = 1;
+			function logic(dt) {
+				if (kb.char('W')) camera.targetPos.y -= speed*dt;
+				else if (kb.char('S')) camera.targetPos.y += speed*dt;
+
+				if (kb.char('A')) camera.targetPos.x -= speed*dt;
+				else if (kb.char('D')) camera.targetPos.x += speed*dt;
+				camera.logic(dt);
+			}
+
+			function render(ctx) {
+				var iX = Math.floor((camera.pos.x - canvas.width/2)/CELL_EDGE);
+				var eX = Math.floor((camera.pos.x + canvas.width/2)/CELL_EDGE);
+
+				var iY = Math.floor((camera.pos.y - canvas.height/2)/CELL_EDGE);
+				var eY = Math.floor((camera.pos.y + canvas.height/2)/CELL_EDGE);
+
+				ctx.save();
+
+				camera.focusOnContext(ctx);
+
+				ctx.globalAlpha = 0.5;
+
+				for (var j = iY; j <= eY; ++j) {
+					for (var i = iX; i <= eX; ++i) {
+						var cell = map.getCellAt(new Pos(i, j));
+						ctx.drawImage(cell.buff, i*CELL_EDGE, j*CELL_EDGE);
+					}
+				}
+
+				ctx.globalAlpha = 1;
+
+				ctx.restore();
+			}
+
+			window.onresize = function() {
+				canvas.width = window.innerWidth;
+				canvas.height = window.innerHeight;
+			}
+			window.onresize();
+
+			var oldTime = +new Date();
+			function mainLoop() {
+				
+				requestAnimFrame(mainLoop);
+
+				var newDate = +new Date();
+				var deltaTime = newDate - oldTime;
+				oldTime = newDate;
+
+				logic(deltaTime);
+				render(context);
+				
+			}
+			mainLoop();
+
+		</script>
+	</body>
+</html>

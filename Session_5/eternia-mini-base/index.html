@@ -1,0 +1,117 @@
+<html>
+<head>
+	<style>
+
+		body {
+			margin: 0px;
+			padding: 0px;
+		}
+
+	</style>
+
+	<script src="Keyboard.js"></script>
+	<script src="requestAnimFrame.js"></script>
+
+	<script src="js/Pos.js"></script>
+	<script src="js/Cell.js"></script>
+	<script src="js/Map.js"></script>
+	<script src="js/Camera.js"></script>
+	<script src="js/stats.js"></script>
+
+</head>
+<body>
+
+	<canvas id="myCanvas"></canvas>
+
+	<script>
+
+		//stats thing
+		var stats = new Stats();
+	    stats.setMode(0);
+	    stats.domElement.style.position = 'absolute';
+	    stats.domElement.style.left = '0px';
+	    stats.domElement.style.top = '0px';
+	    document.body.appendChild(stats.domElement);
+
+		var canvas = document.getElementById("myCanvas");
+		var context = canvas.getContext('2d');
+		var kb = new KeyboardJS(true);
+
+		//So that the camera gets centered
+		canvas.width = window.innerWidth;
+		canvas.height = window.innerHeight;
+
+		var camera = new Camera(canvas.width/2, canvas.height/2);
+		var map = new Map ();
+
+		var speed = 1; //wow, much speed, very aerodynamic
+		function logic (dt) {
+
+			if (kb.char('A')) camera.targetPos.x -= speed*dt;
+			else if (kb.char('D')) camera.targetPos.x += speed*dt;
+
+			if (kb.char('W')) camera.targetPos.y -= speed*dt;
+			else if (kb.char('S')) camera.targetPos.y += speed*dt;
+
+			camera.logic(dt);
+
+		}
+
+		function render (ctx) {
+
+			//We calculate the range of cells needed to be drawn
+			var iX = Math.floor((camera.pos.x - canvas.width/2)/CELL_EDGE);
+			var iY = Math.floor((camera.pos.y - canvas.height/2)/CELL_EDGE);
+			var eX = Math.floor((camera.pos.x + canvas.width/2)/CELL_EDGE);
+			var eY = Math.floor((camera.pos.y + canvas.height/2)/CELL_EDGE);
+			//console.log("RECT: "+iX+","+iY+" to "+eX+","+eY);
+
+			ctx.save();
+
+			camera.focusOnContext(ctx);
+
+			//diziness on
+			ctx.globalAlpha = 0.3;
+			
+			for (var x = iX; x <= eX; ++x) {
+				for (var y = iY; y <= eY; ++y) {
+					var cell = map.getCellAt(new Pos(x, y));
+					ctx.drawImage(cell.buff,x*CELL_EDGE,y*CELL_EDGE);
+				}
+			}
+			
+			ctx.globalAlpha = 1;
+
+			ctx.restore();
+			
+		}
+
+		window.onresize = function () {
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+			render(context);
+		}
+		window.onresize();
+
+		var oldDate = +new Date();
+		function mainLoop () {
+
+			requestAnimFrame(mainLoop);
+
+			stats.begin();
+
+			var newDate = +new Date();
+			var delta = newDate - oldDate;
+			oldDate = newDate;
+
+			logic(delta);
+			render(context);
+
+			stats.end();
+
+		}
+		requestAnimFrame(mainLoop);
+
+	</script>
+
+</body>
