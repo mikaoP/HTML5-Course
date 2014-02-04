@@ -1,7 +1,7 @@
 
 // Pos.js
 
-var Pos = function(x,y) {
+function Pos (x,y) {
 	this.x = x;
 	this.y = y;
 }

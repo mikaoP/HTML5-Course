@@ -1,21 +1,18 @@
-var io = require('socket.io').listen(4242);
-io.set('log.level', 1);
+var io = requiere('socket.io').listen(4242);
+io.set('log level', 1);
 
-var Map = require('./js/Map.js');
-var Camera = require('./js/Camera.js');
-var Cell = require('./js/Cell.js');
-var Pos = require('./js/Pos.js');
+var Camera = require('./js/sCamera');
+var Cell = require('./js/sCell');
+var Map = require('./js/sMap');
+var Pos = require('./js/sPos');
 
-var map = new Map();
 var cameras = {}
+var map = new Map()
 
 io.sockets.on('connection', function(socket) {
-	for (var cId in cameras) {
-		socket.emit('cUpdate', cameras[cId]);
+	var camera = new Camera();
+	for (var cameraId in cameras) {
+		socket.emit('cameraUpdate', cameras[cameraId]);
 	}
-
-	var camera = new Camera(socket.id);
-	cameras[socket.id] = camera;
-
-
+	
 });

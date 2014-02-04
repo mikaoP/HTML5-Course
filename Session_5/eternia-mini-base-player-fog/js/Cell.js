@@ -5,7 +5,7 @@
 
 var CELL_EDGE = 50;
 
-var Cell = function() {
+function Cell () {
 
 	this.color = this.cellColors[Math.floor(Math.random()*this.cellColors.length)];
 	this.genBuffer();
@@ -18,7 +18,7 @@ Cell.prototype = {
 	color : undefined
 
 }
-Cell.prototype.genBuffer = function () {
+Cell.prototype.genBuffer = function (ctx) {
 
 	var buffer = document.createElement('canvas');
 	buffer.width = CELL_EDGE;

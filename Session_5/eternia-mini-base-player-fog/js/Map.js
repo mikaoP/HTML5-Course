@@ -1,4 +1,4 @@
-var Map = function() {
+function Map () {
 	this.cells = {};
 }
 Map.prototype.getCellAt = function (pos) {
