@@ -31,16 +31,15 @@
 		canvas.width = window.innerWidth;
 		canvas.height = window.innerHeight;
 
-		var socket = io.connect('http://localhost:4242');
-		socket.on('connect', function() {
-			socket.id = socket.socket.id;
-		});
 
 		var camera = new Camera(Math.random()*canvas.width/2, Math.random()*canvas.height/2);
 		var players = {}
 		var map = new Map();
 
-		
+		var socket = io.connect('http://localhost:4242');
+		socket.on('connect', function() {
+			socket.id = socket.socket.id;
+		});
 
 		socket.on('mapUpdate', function(mapData) {
 			for (var mapCell in mapData) {
@@ -77,6 +76,7 @@
 			if (playerNewPos.x !== playerOldPos.x || playerNewPos.y !== playerOldPos.y) socket.emit('playerMove', playerNewPos);
 		}
 		var MIN = 12;
+		var CELL_EDGE = 50;
 		function render (ctx) {
 
 			var iX = Math.floor((camera.pos.x - canvas.width/2)/CELL_EDGE);
@@ -88,20 +88,22 @@
 			ctx.clearRect(0,0,canvas.width,canvas.height);
 			camera.focusOnContext(ctx);
 			var player = players[socket.id];
-			for (var x = iX ; x <= eX; ++x) {
-				for (var y = iY; y <= eY; ++y) {
-					var d = Math.sqrt(Math.pow(x - player.pos.x, 2) + Math.pow(y - player.pos.y, 2));
-					if(d > MIN) ctx.globalAlpha = 0;
+			if (player !== undefined){
+				for (var x = iX ; x <= eX; ++x) {
+					for (var y = iY; y <= eY; ++y) {
+						var d = Math.sqrt(Math.pow(x - player.pos.x, 2) + Math.pow(y - player.pos.y, 2));
+						if(d > MIN) ctx.globalAlpha = 0;
 
-					else ctx.globalAlpha = 1 - d/12;
-					var cell = map.getCellAt(new Pos(x, y));
-					ctx.drawImage(cell.buff,x*CELL_EDGE,y*CELL_EDGE);
-					if (x === player.x && y === player.y) {
-						ctx.globalAlpha = 1;
-						ctx.fillRect(x*CELL_EDGE, y*CELL_EDGE, CELL_EDGE, CELL_EDGE);
-						ctx.globalAlpha = 0.6;
+						else ctx.globalAlpha = 1 - d/12;
+						var cell = map.getCellAt(new Pos(x, y));
+						ctx.drawImage(cell.buff,x*CELL_EDGE,y*CELL_EDGE);
+						if (x === player.x && y === player.y) {
+							ctx.globalAlpha = 1;
+							ctx.fillRect(x*CELL_EDGE, y*CELL_EDGE, CELL_EDGE, CELL_EDGE);
+							ctx.globalAlpha = 0.6;
+						}
+						
 					}
-					
 				}
 			}
 			
@@ -120,11 +122,7 @@
 
 			requestAnimFrame(mainLoop);
 
-			newDate = +new Date();
-			var delta = newDate - oldDate;
-			oldDate = newDate;
-
-			logic(delta);
+			logic();
 			render(context);
 		}
 		mainLoop();

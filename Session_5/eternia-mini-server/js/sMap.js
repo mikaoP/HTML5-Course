@@ -1,7 +1,7 @@
 var rangeVision = 12;
-var CELL_EDGE = 50;
 var Pos = require('./sPos');
 var Cell = require('./sCell');
+var CELL_EDGE = 50;
 
 function Map () {
 	this.cells = {};
