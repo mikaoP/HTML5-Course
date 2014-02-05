@@ -11,12 +11,12 @@
 
 	<script src="Keyboard.js"></script>
 	<script src="requestAnimFrame.js"></script>
-
+	<script src="js/Player.js"></script>
 	<script src="js/Pos.js"></script>
 	<script src="js/Cell.js"></script>
 	<script src="js/Map.js"></script>
 	<script src="js/Camera.js"></script>
-	<script src="js/stats.js"></script>
+	<script src="socket.io.min.js"></script>
 
 </head>
 <body>
@@ -24,68 +24,91 @@
 	<canvas id="myCanvas"></canvas>
 
 	<script>
-
-		//stats thing
-		var stats = new Stats();
-	    stats.setMode(0);
-	    stats.domElement.style.position = 'absolute';
-	    stats.domElement.style.left = '0px';
-	    stats.domElement.style.top = '0px';
-	    document.body.appendChild(stats.domElement);
-
 		var canvas = document.getElementById("myCanvas");
 		var context = canvas.getContext('2d');
 		var kb = new KeyboardJS(true);
 
-		//So that the camera gets centered
 		canvas.width = window.innerWidth;
 		canvas.height = window.innerHeight;
 
-		var camera = new Camera(canvas.width/2, canvas.height/2);
-		var map = new Map ();
+		var socket = io.connect('http://localhost:4242');
+		socket.on('connect', function() {
+			socket.id = socket.socket.id;
+		});
 
-		var speed = 1; //wow, much speed, very aerodynamic
-		function logic (dt) {
+		var camera = new Camera(Math.random()*canvas.width/2, Math.random()*canvas.height/2);
+		var players = {}
+		var map = new Map();
 
-			if (kb.char('A')) camera.targetPos.x -= speed*dt;
-			else if (kb.char('D')) camera.targetPos.x += speed*dt;
+		
 
-			if (kb.char('W')) camera.targetPos.y -= speed*dt;
-			else if (kb.char('S')) camera.targetPos.y += speed*dt;
+		socket.on('mapUpdate', function(mapData) {
+			for (var mapCell in mapData) {
+				var cellData = mapData[mapCell];
+				var cell = map.getCellAt(mapCell);
+				cell.updateWithData(cellData);
+			}
+		});
+		
+		socket.on('playerUpdate', function(playerData) {
+			var player = players[playerData.id];
+			if (player === undefined) {
+				player = new Player(),
+				players[playerData.id] = player;
+				camera.targetPos = playerData.pos;
+			}
+			player.updateWithData(playerData);
+		});
 
-			camera.logic(dt);
+		socket.on('playerDisconnect', function(playerData) {
+			delete players[playerData];
+		});
 
+		var oldKey = false;
+		function logic() {
+			var playerNewPos = players[socket.id].pos;
+			var playerOldPos = playerNewPos.clone();
+			if (!oldKey && kb.char('A')) playerNewPos.x -= 1;
+			else if (!oldKey && kb.char('D')) playerNewPos.x += 1;
+
+			if (!oldKey && kb.char('W')) playerNewPos.y += 1;
+			else if (!oldKey && kb.char('S')) playerNewPos.y -= 1;
+			oldKey = kb.char('A') || kb.char('D') || kb.char('W') || kb.char('S');
+			if (playerNewPos.x !== playerOldPos.x || playerNewPos.y !== playerOldPos.y) socket.emit('playerMove', playerNewPos);
 		}
-
+		var MIN = 12;
 		function render (ctx) {
 
-			//We calculate the range of cells needed to be drawn
 			var iX = Math.floor((camera.pos.x - canvas.width/2)/CELL_EDGE);
 			var iY = Math.floor((camera.pos.y - canvas.height/2)/CELL_EDGE);
 			var eX = Math.floor((camera.pos.x + canvas.width/2)/CELL_EDGE);
 			var eY = Math.floor((camera.pos.y + canvas.height/2)/CELL_EDGE);
-			//console.log("RECT: "+iX+","+iY+" to "+eX+","+eY);
 
 			ctx.save();
-
+			ctx.clearRect(0,0,canvas.width,canvas.height);
 			camera.focusOnContext(ctx);
-
-			//diziness on
-			ctx.globalAlpha = 0.3;
-			
-			for (var x = iX; x <= eX; ++x) {
+			var player = players[socket.id];
+			for (var x = iX ; x <= eX; ++x) {
 				for (var y = iY; y <= eY; ++y) {
+					var d = Math.sqrt(Math.pow(x - player.pos.x, 2) + Math.pow(y - player.pos.y, 2));
+					if(d > MIN) ctx.globalAlpha = 0;
+
+					else ctx.globalAlpha = 1 - d/12;
 					var cell = map.getCellAt(new Pos(x, y));
 					ctx.drawImage(cell.buff,x*CELL_EDGE,y*CELL_EDGE);
+					if (x === player.x && y === player.y) {
+						ctx.globalAlpha = 1;
+						ctx.fillRect(x*CELL_EDGE, y*CELL_EDGE, CELL_EDGE, CELL_EDGE);
+						ctx.globalAlpha = 0.6;
+					}
+					
 				}
 			}
 			
-			ctx.globalAlpha = 1;
-
+			//ctx.globalAlpha = 1;
 			ctx.restore();
 			
 		}
-
 		window.onresize = function () {
 			canvas.width = window.innerWidth;
 			canvas.height = window.innerHeight;
@@ -93,24 +116,18 @@
 		}
 		window.onresize();
 
-		var oldDate = +new Date();
 		function mainLoop () {
 
 			requestAnimFrame(mainLoop);
 
-			stats.begin();
-
-			var newDate = +new Date();
+			newDate = +new Date();
 			var delta = newDate - oldDate;
 			oldDate = newDate;
 
 			logic(delta);
 			render(context);
-
-			stats.end();
-
 		}
-		requestAnimFrame(mainLoop);
+		mainLoop();
 
 	</script>
 

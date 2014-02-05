@@ -11,4 +11,3 @@ Pos.prototype.toString = function () {
 Pos.prototype.clone = function () {
 	return new Pos (this.x,this.y);
 }
-module.exports = Pos;
