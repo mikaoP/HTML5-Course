@@ -16,11 +16,12 @@ io.sockets.on('connection', function(socket) {
 	player.genPlayerPos();
 	players[socket.id] = player;
 
-	io.sockets.emit('playerUpdate', player);
-
 	var playerMap = map.getPlayerCells(player.pos);
+	map.placePlayer(player);
 
 	socket.emit('mapUpdate', playerMap);
+	io.sockets.emit('playerUpdate', player);
+	
 
 	socket.on('playerMove', function(pos) {
 
@@ -31,7 +32,6 @@ io.sockets.on('connection', function(socket) {
 	});
 
 	socket.on('disconnect', function() {
-		map.removePlayer(players[socket.id].pos);
 		delete players[socket.id];
 		io.sockets.emit('playerDisconnect', socket.id);
 	});

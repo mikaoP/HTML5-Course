@@ -21,6 +21,6 @@ Cell.prototype.genBuffer = function (ctx) {
 Cell.prototype.updateWithData = function(data) {
 	if (data === undefined) return;
 	if (data.color !== undefined) this.color = data.color;
-	if (data.playerId !== undefined) this.playerId = data.playerId;
+	this.playerId = data.playerId;
 	this.genBuffer();
 }

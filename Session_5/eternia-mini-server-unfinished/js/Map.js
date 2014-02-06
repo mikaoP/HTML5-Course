@@ -3,12 +3,11 @@ function Map () {
 }
 Map.prototype.getCellAt = function (pos) {
 
-	var index = pos.getIndex();
-	var cell = this.cells[index];
+	var cell = this.cells[pos];
 
 	if (cell === undefined) {
 		cell = new Cell ();
-		this.cells[index] = cell;
+		this.cells[pos] = cell;
 	}
 	
 	return cell;

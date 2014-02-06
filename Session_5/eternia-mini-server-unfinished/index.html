@@ -35,45 +35,56 @@
 		var camera = new Camera(Math.random()*canvas.width/2, Math.random()*canvas.height/2);
 		var players = {}
 		var map = new Map();
+		var MIN = 12
 
 		var socket = io.connect('http://localhost:4242');
 		socket.on('connect', function() {
-			socket.id = socket.socket.id;
+			socket.id = socket.socket.sessionid;
 		});
 
 		socket.on('mapUpdate', function(mapData) {
 			for (var mapCell in mapData) {
 				var cellData = mapData[mapCell];
 				var cell = map.getCellAt(mapCell);
+				
 				cell.updateWithData(cellData);
 			}
 		});
 		
+		function dist(pos1, pos2) {
+			return Math.sqrt(Math.pow(pos1.x - pos2.x, 2) + Math.pow(pos1.y - pos2.y, 2));
+		}
+
 		socket.on('playerUpdate', function(playerData) {
 			var player = players[playerData.id];
 			if (player === undefined) {
 				player = new Player(),
 				players[playerData.id] = player;
-				camera.targetPos = playerData.pos;
 			}
 			player.updateWithData(playerData);
+			console.log(player.pos);
+			if (dist(players[socket.id].pos, player.pos) < MIN) map.cells[player.pos].playerId = player.id;
+			if (player.id === socket.id) camera.targetPos = playerData.pos;
 		});
 
 		socket.on('playerDisconnect', function(playerData) {
 			delete players[playerData];
 		});
 
-		var oldKey = false;
+		/*var oldKey = false;
 		function logic() {
-			var playerNewPos = players[socket.id].pos;
-			var playerOldPos = playerNewPos.clone();
-			if (!oldKey && kb.char('A')) playerNewPos.x -= 1;
-			else if (!oldKey && kb.char('D')) playerNewPos.x += 1;
 
-			if (!oldKey && kb.char('W')) playerNewPos.y += 1;
-			else if (!oldKey && kb.char('S')) playerNewPos.y -= 1;
-			oldKey = kb.char('A') || kb.char('D') || kb.char('W') || kb.char('S');
-			if (playerNewPos.x !== playerOldPos.x || playerNewPos.y !== playerOldPos.y) socket.emit('playerMove', playerNewPos);
+			if (socket.id !== undefined) {
+				var playerNewPos = players[socket.id].pos;
+				var playerOldPos = playerNewPos.clone();
+				if (!oldKey && kb.char('A')) playerNewPos.x -= 1;
+				else if (!oldKey && kb.char('D')) playerNewPos.x += 1;
+
+				if (!oldKey && kb.char('W')) playerNewPos.y += 1;
+				else if (!oldKey && kb.char('S')) playerNewPos.y -= 1;
+				oldKey = kb.char('A') || kb.char('D') || kb.char('W') || kb.char('S');
+				if (playerNewPos.x !== playerOldPos.x || playerNewPos.y !== playerOldPos.y) socket.emit('playerMove', playerNewPos);
+			}
 		}
 		var MIN = 12;
 		var CELL_EDGE = 50;
@@ -93,16 +104,10 @@
 					for (var y = iY; y <= eY; ++y) {
 						var d = Math.sqrt(Math.pow(x - player.pos.x, 2) + Math.pow(y - player.pos.y, 2));
 						if(d > MIN) ctx.globalAlpha = 0;
-
 						else ctx.globalAlpha = 1 - d/12;
-						var cell = map.getCellAt(new Pos(x, y));
+						var pos = new Pos(x, y);
+						var cell = map.getCellAt(pos);
 						ctx.drawImage(cell.buff,x*CELL_EDGE,y*CELL_EDGE);
-						if (x === player.x && y === player.y) {
-							ctx.globalAlpha = 1;
-							ctx.fillRect(x*CELL_EDGE, y*CELL_EDGE, CELL_EDGE, CELL_EDGE);
-							ctx.globalAlpha = 0.6;
-						}
-						
 					}
 				}
 			}
@@ -125,7 +130,7 @@
 			logic();
 			render(context);
 		}
-		mainLoop();
+		mainLoop();*/
 
 	</script>
 

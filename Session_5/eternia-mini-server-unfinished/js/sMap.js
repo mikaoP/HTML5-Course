@@ -21,10 +21,10 @@ Map.prototype.getCellAt = function (pos) {
 }
 Map.prototype.getPlayerCells = function (pos) {
 	var playerMap = {};
-	var i0 = (pos.x - rangeVision)/CELL_EDGE;
-	var i1 = (pos.x + rangeVision)/CELL_EDGE;
-	var j0 = (pos.y - rangeVision)/CELL_EDGE;
-	var j1 = (pos.y + rangeVision)/CELL_EDGE;
+	var i0 = pos.x - rangeVision;
+	var i1 = pos.x + rangeVision;
+	var j0 = pos.y - rangeVision;
+	var j1 = pos.y + rangeVision;
 
 	for (var i = i0; i <= i1; ++i) {
 		for (var j = j0; j <= j1; ++j) {
@@ -32,6 +32,7 @@ Map.prototype.getPlayerCells = function (pos) {
 			playerMap[cellPos] = this.getCellAt(cellPos);
 		}
 	}
+	return playerMap;
 }
 Map.prototype.movePlayerTo = function(player, pos) {
 	var playerOldMove = player.pos;
@@ -50,8 +51,12 @@ Map.prototype.movePlayerTo = function(player, pos) {
 		else return false;
 }
 
+Map.prototype.placePlayer = function(playerData) {
+	this.cells[playerData.pos].playerId = playerData.id;
+}
+
 Map.prototype.removePlayer = function (pos) {
-	this.cells[pos].playerId = undefined;
+	this.cells[pos.toString()].playerId = undefined;
 }
 
 module.exports = Map;

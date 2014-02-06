@@ -1,0 +1,265 @@
+<html>
+<head>
+	<style>
+
+		body {
+			margin: 0px;
+			padding: 0px;
+		}
+
+	</style>
+
+	<script src="Keyboard.js"></script>
+	<script src="requestAnimFrame.js"></script>
+
+	<script src="js/Pos.js"></script>
+	<script src="js/Player.js"></script>
+	<script src="js/Cell.js"></script>
+	<script src="js/Map.js"></script>
+	<script src="js/Camera.js"></script>
+
+	<script src="js/stats.js"></script>
+	<script src="socket.io.min.js"></script>
+	<script src="howler.js"></script>
+
+</head>
+<body>
+
+	<canvas id="myCanvas"></canvas>
+
+	<script>
+
+		var sound = new Howl({
+		  urls: ['snd/bgmusic.wav'],
+		  autoplay: true,
+		  loop: true,
+		  volume: 0.5
+		});
+
+		var socket = io.connect('http://localhost:4242/');
+
+		//stats thing
+		var stats = new Stats();
+	    stats.setMode(0);
+	    stats.domElement.style.position = 'absolute';
+	    stats.domElement.style.left = '0px';
+	    stats.domElement.style.top = '0px';
+	    document.body.appendChild(stats.domElement);
+
+		var canvas = document.getElementById("myCanvas");
+		var context = canvas.getContext('2d');
+		var kb = new KeyboardJS(false);
+
+		//So that the camera gets centered
+		canvas.width = window.innerWidth;
+		canvas.height = window.innerHeight;
+
+		var whiteBuffer;
+		(function () {
+			var buff = document.createElement('canvas');
+			buff.width = buff.height = 1;
+			var ctx = buff.getContext('2d');
+			ctx.fillStyle = "white";
+			ctx.fillRect(0,0,1,1);
+			whiteBuffer = buff;
+		})();
+
+		var map = new Map ();
+
+		var camera = new Camera(canvas.width/2, canvas.height/2);
+		var FOG_DIST = 13;
+		var MIN_FOG_DIST = 6;
+
+		var speed = 1; //wow, much speed, very aerodynamic
+		var oldMove = undefined;
+		function logic (dt) {
+
+			for (var playerId in map.players) map.players[playerId].logic(dt);
+
+			camera.logic(dt);
+
+			if (socket.id === undefined || map.players[socket.id] === undefined) return;
+
+			var posInc = new Pos (0,0);
+
+			/*
+			if (kb.char('A')) camera.targetPos.x -= speed*dt;
+			else if (kb.char('D')) camera.targetPos.x += speed*dt;
+
+			if (kb.char('W')) camera.targetPos.y -= speed*dt;
+			else if (kb.char('S')) camera.targetPos.y += speed*dt;
+			*/
+			if (kb.char('A')) posInc.x = -1;
+			else if (kb.char('D')) posInc.x = 1;
+			else if (kb.char('W')) posInc.y = -1;
+			else if (kb.char('S')) posInc.y = 1;
+
+			//if (oldMove === undefined || oldMove.distToPos(new Pos(0,0)) != 1) {
+				if (posInc.distToPos(new Pos(0,0)) == 1) {
+					var player = map.players[socket.id];
+					var pos = player.pos.clone();
+					pos.x += posInc.x;
+					pos.y += posInc.y;
+					//map.movePlayerToPos(socket.id, pos);
+					//camera.targetPos = new Pos(player.pos.x*CELL_EDGE+CELL_EDGE/2, player.pos.y*CELL_EDGE+CELL_EDGE/2);
+					socket.emit('moveToPos',pos);
+				}
+			//}
+			oldMove = posInc;
+
+		}
+
+		var MARGIN = 50;
+		var treeIMG = new Image ();
+		treeIMG.src = "img/tree.png";
+
+		function render (ctx) {
+
+			//We calculate the range of cells needed to be drawn
+			var start = pointToCellPos(camera.pos.x - canvas.width/2, camera.pos.y - canvas.height/2);
+			var end = pointToCellPos(camera.pos.x + canvas.width/2, camera.pos.y + canvas.height/2);
+			//console.log("RECT: "+iX+","+iY+" to "+eX+","+eY);
+
+			var cameraCellPos = pointToCellPos(camera.pos.x, camera.pos.y);
+
+			ctx.drawImage(whiteBuffer, 0, 0, canvas.width, canvas.height);
+
+			ctx.save();
+
+			camera.focusOnContext(ctx);
+			
+			for (var y = start.y; y <= end.y; ++y) {
+				//ctx.save();
+				for (var x = start.x; x <= end.x; ++x) {
+					var cellPos = new Pos(x, y)
+					var cell = map.getCellAt(cellPos);
+					var dist = cameraCellPos.distToPos(cellPos);
+					if (dist < FOG_DIST) {
+						if (dist < MIN_FOG_DIST) ctx.globalAlpha = 1;
+						else ctx.globalAlpha = (1 - (dist - MIN_FOG_DIST)/(FOG_DIST - MIN_FOG_DIST));
+						ctx.drawImage(cell.buff,x*CELL_EDGE,y*CELL_EDGE);
+					}
+				}
+			}
+
+			//ctx.translate(start.x*CELL_EDGE,start.y*CELL_EDGE);
+
+			//ctx.save();
+			for (var y = start.y; y <= end.y; ++y) {
+				//ctx.save();
+				for (var x = start.x; x <= end.x; ++x) {
+					var cellPos = new Pos(x, y)
+					var cell = map.getCellAt(cellPos);
+					var dist = cameraCellPos.distToPos(cellPos);
+					if (dist < FOG_DIST) {
+						if (dist < MIN_FOG_DIST) ctx.globalAlpha = 1;
+						else ctx.globalAlpha = (1 - (dist - MIN_FOG_DIST)/(FOG_DIST - MIN_FOG_DIST));
+
+						ctx.save();
+						ctx.translate(x*CELL_EDGE,y*CELL_EDGE);
+						if (cell.playerId !== undefined && map.players[cell.playerId] !== undefined) {
+							var player = map.players[cell.playerId];
+							ctx.drawImage(player.buff,player.vpos.x-x*CELL_EDGE,player.vpos.y-y*CELL_EDGE);
+						} else if (cell.obj == "tree") {
+							ctx.save();
+							ctx.translate(-CELL_EDGE/2, -CELL_EDGE);
+							ctx.drawImage(treeIMG,0,0);
+							ctx.restore();
+						}
+
+						ctx.restore();
+						
+					}
+					//ctx.translate(CELL_EDGE,0);
+				}
+				//ctx.restore();
+				//ctx.translate(0,CELL_EDGE);
+			}
+			//ctx.restore();
+			
+			ctx.globalAlpha = 1;
+
+			ctx.restore();
+
+			ctx.save();
+
+			if (map.players[socket.id] !== undefined) {
+				//Margin
+				ctx.translate(MARGIN,canvas.height-MARGIN);
+				ctx.translate(0,-50);
+				ctx.fillStyle = "white";
+				ctx.fillRect(0,0,300,50);
+				ctx.fillStyle = "green";
+				ctx.fillRect(2,2,(300-4)*(map.players[socket.id].HP/100),50-4);
+				ctx.fillStyle = "#79C3D2";
+				ctx.fillRect(2,50-10,(300-4)*map.players[socket.id].getCDPercent(),8);
+				ctx.restore();
+			}
+
+		}
+
+		window.onresize = function () {
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+			render(context);
+		}
+		window.onresize();
+
+		var oldDate = +new Date();
+		function mainLoop () {
+
+			requestAnimFrame(mainLoop);
+
+			stats.begin();
+
+			var newDate = +new Date();
+			var delta = newDate - oldDate;
+			oldDate = newDate;
+
+			logic(delta);
+			render(context);
+
+			stats.end();
+
+		}
+		requestAnimFrame(mainLoop);
+
+		socket.on('connect', function () {
+
+			socket.id = socket.socket.sessionid;
+			var player = new Player (socket.id);
+			map.players[player.id] = player;
+			player.pos = new Pos(0,0);
+			camera.targetPos = player.pos;
+
+		});
+
+		socket.on('updateCells', function (cellHash) {
+
+			console.log(cellHash);
+
+			for (var cellId in cellHash) {
+				var cell = map.getCellAt(cellId);
+				cell.updateWithData(cellHash[cellId]);
+			}
+		})
+
+		socket.on('playerUpdate', function (playerData) {
+
+			console.log("playerUpdate!");
+			console.log(playerData);
+
+			var player = map.players[playerData.id];
+			if (player === undefined) {
+				player = new Player (playerData.id);
+				map.players[player.id] = player;
+			}
+
+			player.updateWithData(playerData);
+			if (playerData.pos !== undefined) map.performMove(player.id, new Pos (playerData.pos.x, playerData.pos.y));
+
+		});
+
+	</script>
+
+</body>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<style>
+			body {
+				margin: 0px;
+				padding: 0px;
+			}
+		</style>
+	</head>
+	<body>
+		<script src="requestAnimFrame.js"></script>
+		<script src="Keyboard.js"></script>
+		<script src="socket.io.min.js"></script>
+
+		<canvas id="myCanvas"></canvas>
+			<script>
+			var canvas = document.getElementById('myCanvas');
+			var context = canvas.getContext('2d');
+
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+			var socket = io.connect('http://localhost:4242');
+			var kb = new KeyboardJS(false);
+
+
+			socket.on('connect', function() {
+				socket.id = socket.socket.sessionid;
+			});
+			
+			var Player = function() {}
+			var players = {};
+			
+			Player.prototype.updateWithData = function(data) {
+				if (data === undefined) return;
+				if (data.id !== undefined) this.id = data.id;
+				if (data.x !== undefined) this.x = data.x;
+				if (data.y !== undefined) this.y = data.y;
+				if (data.v !== undefined) this.v = data.v;
+				if (data.score !== undefined) this.score = data.score;
+				if (data.color !== undefined) this.color = data.color;
+			}
+
+			socket.on('playerUpdate', function(playerData) {
+				var player = players[playerData.id];
+				if (player === undefined) {
+					player = new Player();
+					players[playerData.id] = player;
+				}
+				player.updateWithData(playerData);
+			});
+			</script>
+	</body>
+</html>		
