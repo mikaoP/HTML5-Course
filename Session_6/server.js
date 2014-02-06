@@ -18,10 +18,14 @@ io.sockets.on('connection', function(socket) {
 	for (var playerId in players) {
 		socket.emit('playerUpdate', players[playerId]);
 	}
-	syncEnemies();
+	
 	var player = new Player(socket.id);
 	players[socket.id] = player;
 	io.sockets.emit('playerUpdate', player);
+
+	socket.emit('cubeUpdate', cube);
+	
+	syncEnemies();
 
 	socket.on('gotCube', function() {
 		var player = players[socket.id];

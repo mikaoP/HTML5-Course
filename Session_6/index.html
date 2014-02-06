@@ -29,17 +29,37 @@
 			});
 			
 			var Player = function() {}
+			var Cube = function() {}
+			var cube = new Cube();
+			var Enemy = function() {}
 			var players = {};
+			var enemies = [];
 			
+			Enemy.prototype.updateWithData = function(data) {
+				if (data === undefined) return;
+				if (data.x !== undefined) this.x = data.x;
+				if (data.y !== undefined) this.y = data.y;
+				enemies.push(this);
+			}
+			Cube.prototype.updateWithData = function(data) {
+				if (data === undefined) return;
+				if (data.x !== undefined) this.x = data.x;
+				if (data.y !== undefined) this.y = data.y;
+			}
+
 			Player.prototype.updateWithData = function(data) {
 				if (data === undefined) return;
 				if (data.id !== undefined) this.id = data.id;
 				if (data.x !== undefined) this.x = data.x;
 				if (data.y !== undefined) this.y = data.y;
-				if (data.v !== undefined) this.v = data.v;
 				if (data.score !== undefined) this.score = data.score;
 				if (data.color !== undefined) this.color = data.color;
 			}
+
+			socket.on('enemiesUpdate', function(enemyData) {
+				var enemy = new Enemy();
+				enemy.updateWithData(enemyData);
+			});
 
 			socket.on('playerUpdate', function(playerData) {
 				var player = players[playerData.id];
@@ -49,6 +69,11 @@
 				}
 				player.updateWithData(playerData);
 			});
+			socket.on('cubeUpdate', function(cubeData) {
+				cube.updateWithData(cubeData);
+			});
+
+			//Falta Lógica y render.
 			</script>
 	</body>
 </html>		
