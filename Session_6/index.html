@@ -18,8 +18,9 @@
 			var canvas = document.getElementById('myCanvas');
 			var context = canvas.getContext('2d');
 
-			canvas.width = window.innerWidth;
-			canvas.height = window.innerHeight;
+				canvas.width = window.innerWidth;
+				canvas.height = window.innerHeight;
+
 			var socket = io.connect('http://localhost:4242');
 			var kb = new KeyboardJS(false);
 
@@ -47,6 +48,19 @@
 				if (data.y !== undefined) this.y = data.y;
 			}
 
+			Player.prototype.logic = function() {
+				var OldX = this.x;
+				var OldY = this.y;
+				if (kb.char('W')) this.y -= this.v;
+				else if (kb.char('S')) this.y += this.v;
+
+				if (kb.char('A')) this.x -= this.v;
+				else if (kb.char('D')) this.x += this.v;
+
+				if (OldX !== this.x || OldY !== this.y) {
+					socket.emit('playerMove', this);
+				}
+			}
 			Player.prototype.updateWithData = function(data) {
 				if (data === undefined) return;
 				if (data.id !== undefined) this.id = data.id;
@@ -54,11 +68,14 @@
 				if (data.y !== undefined) this.y = data.y;
 				if (data.score !== undefined) this.score = data.score;
 				if (data.color !== undefined) this.color = data.color;
+				if (data.v !== undefined) this.v = data.v;
 			}
 
-			socket.on('enemiesUpdate', function(enemyData) {
-				var enemy = new Enemy();
-				enemy.updateWithData(enemyData);
+			socket.on('enemiesUpdate', function(enemyArray) {
+				enemies = [];
+				for (var i = 0; i < enemyArray.length; ++i) {
+					enemies.push(enemyArray[i]);
+				}
 			});
 
 			socket.on('playerUpdate', function(playerData) {
@@ -72,8 +89,37 @@
 			socket.on('cubeUpdate', function(cubeData) {
 				cube.updateWithData(cubeData);
 			});
+			socket.on('playerDisconnect', function(id) {
+				delete players[id];
+			});
 
-			//Falta Lógica y render.
+			function logic() {
+				console.log("hi");
+				var player = players[socket.id];
+				if (player !== undefined) player.logic();
+			}
+			// EDGE Inventado
+			function render(ctx) {
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
+				ctx.fillStyle = "red";
+				for (var i = 0; i < enemies.length; ++i) {
+					var enemy = enemies[i];
+					ctx.fillRect(enemy.x, enemy.y, 20, 20);
+				}
+				for (playerId in players) {
+					var player = players[playerId];
+					ctx.fillStyle = player.color;
+					ctx.fillRect(player.x, player.y, 20, 20);
+				}
+				ctx.fillStyle = "yellow";
+				ctx.fillRect(cube.x, cube.y, 20, 20);
+			}
+			function mainLoop() {
+				requestAnimFrame(mainLoop);
+				logic();
+				render(context);
+			}
+			mainLoop();
 			</script>
 	</body>
 </html>		
